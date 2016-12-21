@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/plugins/LoadLayer" >
+        <file>icon.png</file>
+    </qresource>
+</RCC>
