@@ -71,12 +71,21 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
         self.panTool = QgsMapToolPan(self.canvas)
         # self.touchTool = QgsMapToolTouch(self.canvas)
 
+        self.layers = self.iface.legendInterface().layers()
+        self.layer_list = []
+        for layer in self.layers:
+            self.layer_list.append(layer.name())
+
+        self.active_layer = self.iface.activeLayer()
+        self.layercrs = layer.crs()
+
         # set up GUI operation signals
 
         # canvas
         self.clickTool.canvasClicked.connect(self.yayClicked)
         self.startButton.clicked.connect(self.showShow)
         self.finishButton.clicked.connect(self.stop)
+        self.values = []
         #self.clickTool.canvasClicked.connect(self.handleMouseDown)
         
         # data
@@ -100,7 +109,7 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
         #self.plotRadar()
 
         # reporting
-        self.statisticsTable.itemClicked.connect(self.selectFeatureTable)
+        #self.tableView.itemClicked.connect(self.selectFeatureTable)
         #self.statistics2Table.itemClicked.connect(self.selectFeatureTable)
         #self.saveStatisticsButton.clicked.connect(self.saveTable)
         self.neighborhood = ('',False)
@@ -127,10 +136,12 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
             self.iface.newProjectCreated.disconnect(self.updateLayers)
             self.iface.legendInterface().itemRemoved.disconnect(self.updateLayers)
             self.iface.legendInterface().itemAdded.disconnect(self.updateLayers)
+            self.canvas.unsetMapTool(self.clickTool)
         except:
             pass
 
         self.closingPlugin.emit()
+        self.canvas.unsetMapTool(self.clickTool)
         event.accept()
 
 
@@ -232,9 +243,29 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
 
     def yayClicked(self, mapPoint, mouseButton):
         if mapPoint:
-            x_coor = mapPoint.x()
-            y_coor = mapPoint.y()
-            self.showCoordinates.append('(' + str(x_coor) + ', ' + str(y_coor) + ')')
+            r = 800
+            x = mapPoint.x()
+            y = mapPoint.y()
+            self.showCoordinates.append('(' + str(x) + ', ' + str(y) + ')')
+            self.values.append((x, y))
+        self.buffersize = r
+        self.outputlayername = 'Walking Range'
+        #Create the memory layer for the result
+        layeruri = 'Polygon?'
+        #CRS needs to be specified
+        crstext = 'PROJ4:%s' % self.layercrs.toProj4()
+        layeruri = layeruri + 'crs=' + crstext
+        memresult = QgsVectorLayer(layeruri, self.outputlayername, 'memory')
+        outbuffername = 'Walking Distance.shp'
+        #bufflayer = QgsVectorLayer(outbuffername, '800m', 'ogr')
+        feature = QgsFeature()
+        feature.setGeometry(QgsGeometry.fromPoint(QgsPoint(x, y)).buffer(r, 50))
+        provider = memresult.dataProvider()
+        memresult.startEditing()
+        provider.addFeatures([feature])
+        memresult.setLayerTransparency(70)
+        memresult.commitChanges()
+        QgsMapLayerRegistry.instance().addMapLayers([memresult])
 
     def showShow(self):
         point_selected = self.run_mouse()
@@ -244,6 +275,7 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
 
     def stop(self):
         self.canvas.unsetMapTool(self.clickTool)
+        self.updateTable(self.values)
         
     # route functions
     def getNetwork(self):
@@ -355,23 +387,6 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
 #######
 #    Reporting functions
 #######
-##    def rasterStatistics(self,rasterLayer):
-##        # Get the layers that are needed (dist2station and neighborhoods)
-##        current_scenario = self.scenarioCombo.currentText()
-##        pathGrid = self.scenarioPath + '/' + current_scenario + '/' + current_scenario + '_dist2station'
-##        neigh = uf.getLegendLayerByName(self.iface,'Neighborhoods')
-##        # new layer for statistics
-##        layer_name = current_scenario + '_gridStatistics'
-##        pathStat = self.scenarioPath + '/' + current_scenario + '/' + layer_name
-##
-##        if not self.subScenario[current_scenario] == 0:
-##            pathGrid = pathGrid + str(self.subScenario[current_scenario])
-##            pathStat = pathStat + str(self.subScenario[current_scenario])
-##        self.subScenario[current_scenario] = self.subScenario[current_scenario] + 1
-##
-##        pathGrid = pathGrid + '.tif'
-##        pathStat = pathStat + '.shp'
-##
 ##        # run SAGA processing algorithm
 ##        processing.runalg("saga:gridstatisticsforpolygons",pathGrid, neigh, False, False, True, False, False, True, False, False, 0, pathStat)
 ##        polyStat = QgsVectorLayer(pathStat, layer_name, 'ogr')
@@ -402,37 +417,19 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
         self.updateTable()
 
     # table window functions
-    def updateTable(self):
-        # Table 1 shows the maximum distance to a node for every neighborhood (index15)
-        # takes a list of label / value pairs, can be tuples or lists. not dictionaries to control order
-        headerLabels = ["Neigborhoods"]
-        for scen in self.getScenarios():
-            if scen in self.scenarioAttributes:
-                headerLabels.append(scen)
-        self.statisticsTable.setColumnCount(len(headerLabels))
-        self.statisticsTable.setHorizontalHeaderLabels(headerLabels)
-        self.statisticsTable.setRowCount(len(self.scenarioAttributes[headerLabels[1]]))
-
-        # write neighborhoods in table
-        if not self.scenarioAttributes.has_key('Rotterdam'):
-            self.baseAttributes()
-
-        for i, item in enumerate(self.scenarioAttributes['Rotterdam']):
-            self.statisticsTable.setItem(i,0,QtGui.QTableWidgetItem(str(item[0])))
-
-        # write maximum distance in table
-        for n, scen in enumerate(headerLabels[1:]):
-            value = self.scenarioAttributes[scen]
-            for i, item in enumerate(value):
-                self.statistics1Table.setItem(i,n+1,QtGui.QTableWidgetItem(str(int(item[14]))))
-
-        self.statisticsTable.horizontalHeader().setResizeMode(0, QtGui.QHeaderView.ResizeToContents)
-        self.statisticsTable.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Stretch)
-        self.statisticsTable.resizeRowsToContents()
-        self.statisticsTable.resizeColumnsToContents()
+    def updateTable(self, values):
+        self.tableWidget.setColumnCount(2)
+        self.tableWidget.setHorizontalHeaderLabels(['Coordinates', 'Ehh...'])
+        self.tableWidget.setRowCount(len(values))
+        for i in range(len(values)):
+            self.tableWidget.setItem(i, 0, QtGui.QTableWidgetItem(unicode(values[i])))
+            self.tableWidget.setItem(i, 1, QtGui.QTableWidgetItem(unicode(i+1)))
+        self.tableWidget.horizontalHeader().setResizeMode(0, QtGui.QHeaderView.ResizeToContents)
+        self.tableWidget.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Stretch)
+        self.tableWidget.resizeRowsToContents()
 
     def clearTable(self):
-        self.statisticsTable.clear()
+        self.tableWidget.clear()
 
 #    def openinBrowser(self):
 #        webbrowser.open('https://github.com/SimonGriffioen/pascal/wiki', new=2)
@@ -459,3 +456,4 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
         self.canvas.zoomToSelected(layer)
         # deselect feature
         self.neighborhood = (item.row(),True)
+
