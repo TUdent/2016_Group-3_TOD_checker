@@ -76,8 +76,6 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
         for layer in self.layers:
             self.layer_list.append(layer.name())
 
-        self.active_layer = self.iface.activeLayer()
-        self.layercrs = layer.crs()
 
         # set up GUI operation signals
 
@@ -242,13 +240,16 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
 #######
 
     def yayClicked(self, mapPoint, mouseButton):
+        r = 800
         if mapPoint:
-            r = 800
-            x = mapPoint.x()
-            y = mapPoint.y()
-            self.showCoordinates.append('(' + str(x) + ', ' + str(y) + ')')
-            self.values.append((x, y))
+            if self.iface.activeLayer() != None:
+                x = mapPoint.x()
+                y = mapPoint.y()
+                self.showCoordinates.append('(' + str(x) + ', ' + str(y) + ')')
+                self.values.append((x, y))
         self.buffersize = r
+        self.active_layer = self.iface.activeLayer()
+        self.layercrs = self.active_layer.crs()
         self.outputlayername = 'Walking Range'
         #Create the memory layer for the result
         layeruri = 'Polygon?'
