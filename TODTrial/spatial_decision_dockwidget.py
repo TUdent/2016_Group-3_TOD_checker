@@ -31,6 +31,7 @@ import numpy
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+import math as m
 
 # Initialize Qt resources from file resources.py
 import resources
@@ -43,6 +44,7 @@ import webbrowser
 import csv
 
 from . import utility_functions as uf
+#import mpl_toolkits.basemap.pyproj as pyproj
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'spatial_decision_dockwidget_base.ui'))
@@ -84,6 +86,7 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
         self.startButton.clicked.connect(self.showShow)
         self.finishButton.clicked.connect(self.stop)
         self.values = []
+        self.attributes = []
         #self.clickTool.canvasClicked.connect(self.handleMouseDown)
         
         # data
@@ -242,14 +245,17 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
     def yayClicked(self, mapPoint, mouseButton):
         r = 800
         if mapPoint:
-            if self.iface.activeLayer() != None:
+            if self.iface.activeLayer() not in self.layers:
+                self.iface.setActiveLayer(self.layers[0])
+            self.active_layer = self.iface.activeLayer()
+            self.layercrs = self.active_layer.crs()
+            if self.active_layer != None:
                 x = mapPoint.x()
                 y = mapPoint.y()
                 self.showCoordinates.append('(' + str(x) + ', ' + str(y) + ')')
                 self.values.append((x, y))
+                self.attributes.append(self.within_range(x, y, r, self.active_layer))
         self.buffersize = r
-        self.active_layer = self.iface.activeLayer()
-        self.layercrs = self.active_layer.crs()
         self.outputlayername = 'Walking Range'
         #Create the memory layer for the result
         layeruri = 'Polygon?'
@@ -276,7 +282,18 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
 
     def stop(self):
         self.canvas.unsetMapTool(self.clickTool)
-        self.updateTable(self.values)
+        self.updateTable(self.values, self.attributes)
+
+    def within_range(self, x, y, r, layer):
+        i = 0
+        for f in layer.getFeatures():
+            if f.geometry().wkbType() == QGis.WKBMultiPoint:
+                geom = f.geometry().asMultiPoint()
+                xf = geom[0][0]
+                yf = geom[0][1]
+                if m.sqrt((x-xf)**2+(y-yf)**2) <= r:
+                    i += 1
+        return i
         
     # route functions
     def getNetwork(self):
@@ -418,13 +435,13 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
         self.updateTable()
 
     # table window functions
-    def updateTable(self, values):
+    def updateTable(self, values, attributes):
         self.tableWidget.setColumnCount(2)
-        self.tableWidget.setHorizontalHeaderLabels(['Coordinates', 'Ehh...'])
+        self.tableWidget.setHorizontalHeaderLabels(['Coordinates', 'Train Stations'])
         self.tableWidget.setRowCount(len(values))
         for i in range(len(values)):
             self.tableWidget.setItem(i, 0, QtGui.QTableWidgetItem(unicode(values[i])))
-            self.tableWidget.setItem(i, 1, QtGui.QTableWidgetItem(unicode(i+1)))
+            self.tableWidget.setItem(i, 1, QtGui.QTableWidgetItem(unicode(attributes[i])))
         self.tableWidget.horizontalHeader().setResizeMode(0, QtGui.QHeaderView.ResizeToContents)
         self.tableWidget.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Stretch)
         self.tableWidget.resizeRowsToContents()
