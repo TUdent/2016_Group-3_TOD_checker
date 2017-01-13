@@ -190,10 +190,12 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
 #######
 
     def yayClicked(self, mapPoint, mouseButton):
-        r = 800
+        r = 1200
         if mapPoint:
             if self.iface.activeLayer() not in self.layers:
-                self.iface.setActiveLayer(self.layers[0])
+                for layer in self.layers:
+                    if 'train' in layer.name():
+                        self.iface.setActiveLayer(layer)
             self.active_layer = self.iface.activeLayer()
             self.layercrs = self.active_layer.crs()
             if self.active_layer != None:
