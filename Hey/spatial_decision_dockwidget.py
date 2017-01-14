@@ -93,10 +93,12 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
 
         # canvas
         self.clickTool.canvasClicked.connect(self.yayClicked)
-        self.startButton.clicked.connect(self.showShow)
+        self.startButton.clicked.connect(self.showWhatever)
         self.finishButton.clicked.connect(self.stop)
         self.values = []
         self.attributes = []
+        self.train = []
+        self.bus = []
         #self.clickTool.canvasClicked.connect(self.handleMouseDown)
 
         # analysis
@@ -114,6 +116,8 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
         self.chart_figure = Figure()
         self.chart_canvas = FigureCanvas(self.chart_figure)
         self.chartLayout.addWidget(self.chart_canvas)
+        self.colorList = ['#0101ff', '#01ff01', '#ff0101', '#ffff01', '#ff01ff', '#01ffff', '#7f0101', '#017f01', '#7f017f', '#7f7f01', '#7f7f7f']
+        self.tobesorted = []
 
         # initialisation
         #self.updateLayers()
@@ -133,9 +137,9 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
         self.closingPlugin.emit()
         self.canvas.unsetMapTool(self.clickTool)
         self.lyrs = self.iface.legendInterface().layers()
-        for lyr in self.lyrs:
-            if lyr.name() == 'Walking Range':
-                QgsMapLayerRegistry.instance().removeMapLayer(lyr)
+##        for lyr in self.lyrs:
+##            if lyr.name() == 'Walking Range':
+##                QgsMapLayerRegistry.instance().removeMapLayer(lyr)
         self.values = []
         self.attributes = []
         self.clearTable()
@@ -192,20 +196,32 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
     def yayClicked(self, mapPoint, mouseButton):
         r = 1200
         if mapPoint:
-            if self.iface.activeLayer() not in self.layers:
-                for layer in self.layers:
-                    if 'train' in layer.name():
-                        self.iface.setActiveLayer(layer)
+            trainLayer = None
+            busLayer = None
+            self.x = mapPoint.x()
+            self.y = mapPoint.y()
+            #self.values.append((self.x, self.y))
+            self.showCoordinates.append('(' + str(self.x) + ', ' + str(self.y) + ')')
+            countTrain = 0
+            countBus = 0
+            name = self.defineName()
+            self.values.append(name)
+            for layer in self.layers:
+                if 'train_stations' in layer.name():
+                    trainLayer = layer
+                if 'bus_stops' in layer.name():
+                    busLayer = layer
             self.active_layer = self.iface.activeLayer()
             self.layercrs = self.active_layer.crs()
-            if self.active_layer != None:
-                x = mapPoint.x()
-                y = mapPoint.y()
-                self.showCoordinates.append('(' + str(x) + ', ' + str(y) + ')')
-                self.values.append((x, y))
-                self.attributes.append(self.within_range(x, y, r, self.active_layer))
+            if trainLayer != None:
+                countTrain = self.within_range(self.x, self.y, r, trainLayer)
+            if busLayer != None:
+                countBus = self.within_range(self.x, self.y, r, busLayer)
+            self.train.append(countTrain)
+            self.bus.append(countBus)
+            #self.attributes.append(self.within_range(x, y, r, self.active_layer))
         self.buffersize = r
-        self.outputlayername = 'Walking Range'
+        self.outputlayername = name
         #Create the memory layer for the result
         layeruri = 'Polygon?'
         #CRS needs to be specified
@@ -215,7 +231,7 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
         outbuffername = 'Walking Distance.shp'
         #bufflayer = QgsVectorLayer(outbuffername, '800m', 'ogr')
         feature = QgsFeature()
-        feature.setGeometry(QgsGeometry.fromPoint(QgsPoint(x, y)).buffer(r, 50))
+        feature.setGeometry(QgsGeometry.fromPoint(QgsPoint(self.x, self.y)).buffer(r, 50))
         provider = memresult.dataProvider()
         memresult.startEditing()
         provider.addFeatures([feature])
@@ -223,22 +239,34 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
         memresult.commitChanges()
         QgsMapLayerRegistry.instance().addMapLayers([memresult])
 
-    def showShow(self):
+    def showWhatever(self):
         point_selected = self.run_mouse()
 
     def run_mouse(self):
         self.canvas.setMapTool(self.clickTool)
 
     def stop(self):
+        for i in range(len(self.values)):
+            self.attributes.append(self.train[i]+self.bus[i]*0.1)
         self.canvas.unsetMapTool(self.clickTool)
-        if len(self.values) > 2:
-            self.updateTable(self.values, self.attributes)
-            self.clearChart()
-        elif len(self.values) == 1:
-            self.plotRadar(self.attributes[0])
+        self.showCoordinates.append(str(self.train) + ',' + str(self.bus) + ',' + str(self.attributes) + ',' +str(self.values))
+        self.updateTable(self.values, self.attributes)
+            #self.clearChart()
+##        if len(self.values) == 1:
+##            self.plotRadar(self.attributes[0])
+##        else:
+##            self.plotRadar(self.attributes[0])
+##            self.plotRadar(self.attributes[1], 'g')
+        if len(self.values) <= 10:
+            for i in range(len(self.tobesorted)):
+                self.plotRadar(self.tobesorted[i][0], self.colorList[i])
         else:
-            self.plotRadar(self.attributes[0])
-            self.plotRadar(self.attributes[1], 'g')
+            for i in range(10):
+                self.plotRadar(self.tobesorted[i][0], self.colorList[i])
+            for i in range(10, len(self.tobesorted)):
+                self.plotRadar(self.tobesorted[i][0], self.colorList[10])
+        self.attributes = []
+        self.tobesorted = []
 
     def within_range(self, x, y, r, layer):
         i = 0
@@ -269,6 +297,12 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
         if msgBox.exec_() == QtGui.QMessageBox.Yes:
             self.loadDataRotterdam()
 
+    def defineName(self):
+        msgBox = QtGui.QInputDialog()
+        text, ok = msgBox.getText(self, 'Name the Location', 'Please name the location you choose:')
+        if ok:
+            return text
+
 
 
 #######
@@ -277,20 +311,20 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
     def plotRadar(self, attribute, color = 'b'):
         labels = numpy.array(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'])
         datalength = 8
-        standard = numpy.array([10]*8)
+        #standard = numpy.array([10]*8)
         data = numpy.array([attribute, 2, 3, 4, 5, 6, 7, 8])
         angles = numpy.linspace(0, 2*numpy.pi, datalength, endpoint = False)
-        standard = numpy.concatenate((standard, [standard[0]]))
+        #standard = numpy.concatenate((standard, [standard[0]]))
         data = numpy.concatenate((data, [data[0]]))
         angles = numpy.concatenate((angles, [angles[0]]))
         #fig = plt.figure()
         self.ax = self.chart_figure.add_subplot(111, polar = True)
-        self.ax.plot(angles, standard, 'r', linewidth = 2)
-        self.ax.fill(angles, standard, 'r', alpha = 0.2)
+        #self.ax.plot(angles, standard, 'r', linewidth = 2)
+        #self.ax.fill(angles, standard, 'r', alpha = 0.2)
         self.ax.plot(angles, data, color, linewidth = 2)
         self.ax.fill(angles, data, color, alpha = 0.2)
         self.ax.set_thetagrids(angles*180/numpy.pi, labels)
-        self.ax.set_title('TOD')
+        self.ax.set_title('TOD\n')
         #self.ax.grid = True
         self.chart_canvas.draw()
 ##            else:
@@ -308,16 +342,15 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
 #######
     # table window functions
     def updateTable(self, values, attributes):
-        tobesorted = []
-        self.tableWidget.setColumnCount(2)
-        self.tableWidget.setHorizontalHeaderLabels(['Coordinates', 'Train Stations'])
+        self.tableWidget.setColumnCount(9)
+        self.tableWidget.setHorizontalHeaderLabels(['Locations', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'])
         self.tableWidget.setRowCount(len(values))
         for i in range(len(values)):
-            tobesorted.append((attributes[i], values[i]))
-        tobesorted.sort(reverse = True)
-        for i in range(len(tobesorted)):
-            self.tableWidget.setItem(i, 0, QtGui.QTableWidgetItem(unicode(tobesorted[i][1])))
-            self.tableWidget.setItem(i, 1, QtGui.QTableWidgetItem(unicode(tobesorted[i][0])))
+            self.tobesorted.append((attributes[i], values[i]))
+        self.tobesorted.sort(reverse = True)
+        for i in range(len(self.tobesorted)):
+            self.tableWidget.setItem(i, 0, QtGui.QTableWidgetItem(unicode(self.tobesorted[i][1])))
+            self.tableWidget.setItem(i, 1, QtGui.QTableWidgetItem(unicode(self.tobesorted[i][0])))
         self.tableWidget.horizontalHeader().setResizeMode(0, QtGui.QHeaderView.ResizeToContents)
         self.tableWidget.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Stretch)
         self.tableWidget.resizeRowsToContents()
