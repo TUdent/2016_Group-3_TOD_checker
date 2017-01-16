@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>468</width>
-    <height>785</height>
+    <height>700</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -110,7 +110,7 @@
        <string notr="true">font: 9pt &quot;Trebuchet MS&quot;;</string>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="dataTab">
        <attribute name="title">
@@ -189,7 +189,7 @@
         <item>
          <widget class="QLabel" name="label_2">
           <property name="text">
-           <string>Locations (click to zoom)</string>
+           <string>Locations (Doubleclick to zoom)</string>
           </property>
          </widget>
         </item>
@@ -216,6 +216,13 @@
         <string>Visualisation</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_6">
+        <item>
+         <widget class="QToolButton" name="LegendButton">
+          <property name="text">
+           <string>Elements of Placemaking (Web)</string>
+          </property>
+         </widget>
+        </item>
         <item>
          <layout class="QVBoxLayout" name="chartLayout">
           <property name="spacing">
