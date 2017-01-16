@@ -176,7 +176,7 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
 #######
     def loadDataRotterdam(self):
         try:
-            data_path = os.path.join(os.path.dirname(__file__), 'sample_data','LayerRotterdam.qgs')
+            data_path = os.path.join(os.path.dirname(__file__), 'sample_data','Rotterdam_Sample_Data.qgs')
         except:
             self.errorOccurs()
         self.iface.addProject(data_path)
