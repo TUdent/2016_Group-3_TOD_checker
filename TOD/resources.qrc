@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="/plugins/SpatialDecision" >
+    <file>icons/icon.png</file>
+    <file>icons/urban-planners-300x150.jpg</file>
+  </qresource>
+</RCC>
