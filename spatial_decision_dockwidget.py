@@ -124,6 +124,7 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
         self.showCoordinates.itemDoubleClicked.connect(self.zoomSelected)
 
         # visualisation
+        self.LegendButton.clicked.connect(self.openinBrowserLegend)
         self.saveChart.clicked.connect(self.saveChartPNG)
 
         # reporting
@@ -187,6 +188,10 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
 
     def openinBrowser(self):
         webbrowser.open('https://github.com/TUdent/2016_Group-3_TOD_checker/wiki', new=2)
+
+    def openinBrowserLegend(self):
+        webbrowser.open('https://github.com/TUdent/2016_Group-3_TOD_checker/wiki/Elements-of-Placemaking', new=2)
+
 
 
 
@@ -336,7 +341,7 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
         if self.countShop <= 80:
             self.MoU.append(self.countCafe1+self.countShop*0.1)
         else:
-            self.MoU.append(self.countCafe+8)
+            self.MoU.append(self.countCafe1+8)
 
     def pedestrialScale(self, x, y):
 	self.lightsLayer = None
