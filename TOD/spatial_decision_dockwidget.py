@@ -139,8 +139,8 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
         self.chartLayout.addWidget(self.chart_canvas)
         self.chartLayout.addWidget(self.legend)
         self.colorList = ['#0101ff', '#01ff01', '#ff0101', '#ffff01', '#ff01ff', '#7f7f7f']
-        self.labelList = ['PtR', 'PuS', 'MoU', 'PeS', 'GfR', 'SC', 'IlS', 'RP']
-        self.titleList = ['Name', 'Total', 'PtR', 'PuS', 'MoU', 'PeS', 'GfR', 'SC', 'IlS', 'RP', 'Color']
+        self.labelList = ['PtR', 'PuS', 'MoU', 'PeS', 'GfR', 'SC', 'TlS', 'RP']
+        self.titleList = ['Name', 'Total', 'PtR', 'PuS', 'MoU', 'PeS', 'GfR', 'SC', 'TlS', 'RP', 'Color']
         self.variantList = [QtCore.QVariant.String, QtCore.QVariant.Double, QtCore.QVariant.Double, QtCore.QVariant.Double, QtCore.QVariant.Double, QtCore.QVariant.Double, QtCore.QVariant.Double, QtCore.QVariant.Double, QtCore.QVariant.Double, QtCore.QVariant.Double, QtCore.QVariant.String]
 
         # initialisation
@@ -312,10 +312,11 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
             self.countTrain = self.within_range(x, y, self.r1, self.trainLayer)
         if self.busLayer != None:
             self.countBus = self.within_range(x, y, self.r1, self.busLayer)
-        if self.countBus <= 80:
-            self.PtR.append(self.countTrain+self.countBus*0.1)
+        result = self.countTrain+self.countBus*0.1
+        if result <= 10:
+            self.PtR.append(result)
         else:
-            self.PtR.append(self.countTrain+8)
+            self.PtR.append(10)
 
     def publicSpaces(self, x, y):
 	self.bikeLayer = None
@@ -323,8 +324,11 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
 	    if 'Bike_Parking_Sheds' in layer.name():
 		self.bikeLayer = layer
 	if self.bikeLayer != None:
-	    self.countBike = self.within_range(x, y, self.r2, self.bikeLayer)/10.0
-	self.PuS.append(self.countBike)
+	    self.countBike = self.within_range(x, y, self.r2, self.bikeLayer)
+	if self.countBike <= 10:
+            self.PuS.append(self.countBike)
+        else:
+            self.PuS.append(10)
 
     def cafeRetail(self, x, y):
         self.cafeLayer = None
@@ -338,10 +342,11 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
             self.countCafe1 = self.within_range(x, y, self.r2, self.cafeLayer)
         if self.shopLayer != None:
             self.countShop = self.within_range(x, y, self.r2, self.shopLayer)
-        if self.countShop <= 80:
-            self.MoU.append(self.countCafe1+self.countShop*0.1)
+        result = self.countCafe1+self.countShop*0.1
+        if result <= 10:
+            self.MoU.append(result)
         else:
-            self.MoU.append(self.countCafe1+8)
+            self.MoU.append(10)
 
     def pedestrialScale(self, x, y):
 	self.lightsLayer = None
@@ -350,7 +355,10 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
 	    	self.lightsLayer = layer
     	if self.lightsLayer != None:
             self.countLights = self.within_range(x, y, self.r3, self.lightsLayer)/20.0
-	self.PeS.append(self.countLights)
+        if self.countLights <= 10:
+            self.PeS.append(self.countLights)
+        else:
+            self.PeS.append(10)
 
     def groundFloorRetails(self, x, y):
         self.shopLayer = None
@@ -359,7 +367,10 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
                 self.shopLayer = layer
         if self.shopLayer != None:
             self.countShop = self.within_range(x, y, self.r2, self.shopLayer)/10.0
-        self.GfR.append(self.countShop)
+        if self.countShop <= 10:
+            self.GfR.append(self.countShop)
+        else:
+            self.GfR.append(10)
 
     def sidewalkCafes(self, x, y):
         self.cafeLayer = None
@@ -367,8 +378,11 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
             if 'Cafe' in layer.name():
                 self.cafeLayer = layer
         if self.cafeLayer != None:
-            self.countCafe2 = self.within_range(x, y, self.r3, self.cafeLayer)
-        self.SC.append(self.countCafe2)
+            self.countCafe2 = self.within_range(x, y, self.r3, self.cafeLayer)*2
+        if self.countCafe2 <= 10:
+            self.SC.append(self.countCafe2)
+        else:
+            self.SC.append(10)
 
     def treeLinedStreets(self, x, y):
         self.treeLayer = None
@@ -376,17 +390,23 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
             if 'Tree' in layer.name():
                 self.treeLayer = layer
         if self.treeLayer != None:
-            self.countTree = self.within_range(x, y, self.r4, self.treeLayer)/100.0
-        self.TlS.append(self.countTree)
+            self.countTree = self.within_range(x, y, self.r4, self.treeLayer)/10.0
+        if self.countTree <= 10:
+            self.TlS.append(self.countTree)
+        else:
+            self.TlS.append(10)
 
     def reducedParking(self, x, y):
 	self.parkingLayer = None
 	for layer in self.layers:
-	    if 'Parking_Garage' in layer.name():
-		    self.parkingLayer = layer
+	    if 'Garage' in layer.name():
+		self.parkingLayer = layer
 	if self.parkingLayer != None:
 	    self.countParking = self.within_range(x, y, self.r1, self.parkingLayer)
-	self.RP.append(self.countParking)
+	if self.countParking <= 10:
+            self.RP.append(self.countParking)
+        else:
+            self.RP.append(10)
 
     def within_range(self, x, y, r, layer):
         i = 0
@@ -474,13 +494,7 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
         self.provider.addFeatures(features)
         self.memresult.updateExtents()
         self.memresult.commitChanges()
-        features = self.memresult.getFeatures()
-        for feat in features:
-            colour = feat.attribute('Color')
-            self.iface.mapCanvas().setSelectionColor(QtGui.QColor(colour))
-            i = feat.id()
-            self.memresult.select(i)
-            self.memresult.triggerRepaint()
+        #features = self.memresult.getFeatures()
 
     def newFeature(self, item, color):
         feature = QgsFeature()
@@ -618,16 +632,6 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
             self.tableWidget.setItem(i, 9, QtGui.QTableWidgetItem(unicode(self.tobesorted[i][8])))
             self.tableWidget.setItem(i, 10, QtGui.QTableWidgetItem(unicode(self.tobesorted[i][10])))
         self.tableWidget.horizontalHeader().setResizeMode(0, QtGui.QHeaderView.ResizeToContents)
-##        self.tableWidget.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Stretch)
-##        self.tableWidget.horizontalHeader().setResizeMode(2, QtGui.QHeaderView.Stretch)
-##        self.tableWidget.horizontalHeader().setResizeMode(3, QtGui.QHeaderView.Stretch)
-##        self.tableWidget.horizontalHeader().setResizeMode(4, QtGui.QHeaderView.Stretch)
-##        self.tableWidget.horizontalHeader().setResizeMode(5, QtGui.QHeaderView.Stretch)
-##        self.tableWidget.horizontalHeader().setResizeMode(6, QtGui.QHeaderView.Stretch)
-##        self.tableWidget.horizontalHeader().setResizeMode(7, QtGui.QHeaderView.Stretch)
-##        self.tableWidget.horizontalHeader().setResizeMode(8, QtGui.QHeaderView.Stretch)
-##        self.tableWidget.horizontalHeader().setResizeMode(9, QtGui.QHeaderView.Stretch)
-##        self.tableWidget.horizontalHeader().setResizeMode(10, QtGui.QHeaderView.Stretch)
         self.tableWidget.resizeRowsToContents()
 
     def saveTableCSV(self):
