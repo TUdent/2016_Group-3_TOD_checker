@@ -91,20 +91,27 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
 
         self.values = []
         self.PtR = []
-        self.train = []
-        self.bus = []
+        self.PuS = []
+        self.MoU = []
+        self.PeS = []
+        self.GfR = []
+        self.SC = []
+        self.TlS = []
+        self.RP = []
         self.tobesorted = []
         self.coordinates = []
+        self.features = []
         self.r1 = 800
         self.r2 = 400
         self.r3 = 200
+        self.r4 = 100
+        self.memresult = QgsVectorLayer()
+        #self.provider = self.memresult.dataProvider()
         
         # set up GUI operation signals
 
         # canvas
         self.clickTool.canvasClicked.connect(self.yayClicked)
-        #self.startButton.clicked.connect(self.showWhatever)
-        #self.finishButton.clicked.connect(self.stop)
         self.selectionButton.setCheckable(True)
         self.selectionButton.clicked.connect(self.showWhatever)
         self.clearButton.setCheckable(True)
@@ -113,12 +120,11 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
         #self.clickTool.canvasClicked.connect(self.handleMouseDown)
 
         # analysis
-        #self.showCoordinates.setReadOnly(True)
-        #self.showCoordinates.setFontPointSize(12)
         self.showCoordinates.setSelectionMode(1)
         self.showCoordinates.itemDoubleClicked.connect(self.zoomSelected)
 
         # visualisation
+        self.LegendButton.clicked.connect(self.openinBrowserLegend)
         self.saveChart.clicked.connect(self.saveChartPNG)
 
         # reporting
@@ -134,6 +140,8 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
         self.chartLayout.addWidget(self.legend)
         self.colorList = ['#0101ff', '#01ff01', '#ff0101', '#ffff01', '#ff01ff', '#7f7f7f']
         self.labelList = ['PtR', 'PuS', 'MoU', 'PeS', 'GfR', 'SC', 'IlS', 'RP']
+        self.titleList = ['Name', 'Total', 'PtR', 'PuS', 'MoU', 'PeS', 'GfR', 'SC', 'IlS', 'RP', 'Color']
+        self.variantList = [QtCore.QVariant.String, QtCore.QVariant.Double, QtCore.QVariant.Double, QtCore.QVariant.Double, QtCore.QVariant.Double, QtCore.QVariant.Double, QtCore.QVariant.Double, QtCore.QVariant.Double, QtCore.QVariant.Double, QtCore.QVariant.Double, QtCore.QVariant.String]
 
         # initialisation
         #self.updateLayers()
@@ -161,13 +169,29 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
 ##                QgsMapLayerRegistry.instance().removeMapLayer(lyr)
         self.values = []
         self.PtR = []
+        self.PuS = []
+        self.MoU = []
+        self.PeS = []
+        self.GfR = []
+        self.SC = []
+        self.TlS = []
+        self.RP = []
+        self.tobesorted = []
+        self.coordinates = []
+        self.features = []
         self.clearTable()
         self.clearCoordinates()
         self.clearChart()
         event.accept()
+##        self.addTestLayer()
+
 
     def openinBrowser(self):
         webbrowser.open('https://github.com/TUdent/2016_Group-3_TOD_checker/wiki', new=2)
+
+    def openinBrowserLegend(self):
+        webbrowser.open('https://github.com/TUdent/2016_Group-3_TOD_checker/wiki/Elements-of-Placemaking', new=2)
+
 
 
 
@@ -190,9 +214,6 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
         # get summary of the attribute
         layer = uf.getLegendLayerByName(self.iface, "Rotterdam_gridStatistics")
         summary = []
-        # only use the first attribute in the list
-##        for feature in layer.getFeatures():
-##            summary.append(feature)#, feature.attribute(attribute)))
         self.scenarioAttributes["Rotterdam"] = summary
         # send this to the table
         self.clearTable()
@@ -231,23 +252,32 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
         self.canvas.setMapTool(self.clickTool)
 
     def stop(self):
+        for layer in self.iface.legendInterface().layers():
+            if layer.name() == 'Result':
+                QgsMapLayerRegistry.instance().removeMapLayer(layer)
         self.legend.clear()
         self.selectionButton.setChecked(False)
         self.clearChart()
-        self.publicTransport()
-#        for i in range(len(self.values)):
-#            self.attributes.append(self.train[i]+self.bus[i]*0.1)
+        self.features = []
         self.canvas.unsetMapTool(self.clickTool)
-        #self.showCoordinates.append(str(self.train) + ',' + str(self.bus) + ',' + str(self.attributes) + ',' +str(self.values))
-        self.updateTable(self.values, self.PtR, self.coordinates)
+        self.updateTable(self.values, self.PtR, self.PuS, self.MoU, self.PeS, self.GfR, self.SC, self.TlS, self.RP, self.coordinates)
+        if len(self.values) <= 5:
+            for i in range(len(self.tobesorted)):
+                self.features.append(self.newFeature(self.tobesorted[i], self.colorList[i]))
+        else:
+            for i in range(5):
+                self.features.append(self.newFeature(self.tobesorted[i], self.colorList[i]))
+            for i in range(5, len(self.tobesorted)):
+                self.features.append(self.newFeature(self.tobesorted[i], self.colorList[5]))
+        self.addLayer(self.features)
         if len(self.values) <= 5:
             for i in range(len(self.tobesorted)):
                 brush = QtGui.QBrush()
                 color = QtGui.QColor()
                 color.setNamedColor(self.colorList[i])
                 brush.setColor(color)
-                self.plotRadar(self.tobesorted[i][0], self.colorList[i])
-                self.legend.addItem(self.tobesorted[i][1])
+                self.plotRadar(self.tobesorted[i], self.colorList[i])
+                self.legend.addItem(self.tobesorted[i][9])
                 self.legend.item(i).setForeground(brush)
         else:
             for i in range(5):
@@ -255,19 +285,18 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
                 color = QtGui.QColor()
                 color.setNamedColor(self.colorList[i])
                 brush.setColor(color)
-                self.plotRadar(self.tobesorted[i][0], self.colorList[i])
-                self.legend.addItem(self.tobesorted[i][1])
+                self.plotRadar(self.tobesorted[i], self.colorList[i])
+                self.legend.addItem(self.tobesorted[i][9])
                 self.legend.item(i).setForeground(brush)
             for i in range(5, len(self.tobesorted)):
-                self.plotRadar(self.tobesorted[i][0], self.colorList[5])
+                self.plotRadar(self.tobesorted[i], self.colorList[5])
             brush = QtGui.QBrush()
             color = QtGui.QColor()
             color.setNamedColor(self.colorList[5])
             brush.setColor(color)
             self.legend.addItem('Others')
-            self.legend.item(i).setForeground(brush)
+            self.legend.item(5).setForeground(brush)
             #self.clearChart()
-        self.PtR = []
         self.tobesorted = []
         self.showCoordinates.setSelectionMode(1)
 
@@ -275,32 +304,106 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
         self.trainLayer = None
         self.busLayer = None
         for layer in self.layers:
-            if 'train_stations' in layer.name():
+            if 'Train' in layer.name():
                 self.trainLayer = layer
-            if 'bus_stops' in layer.name():
+            if 'RET' in layer.name():
                 self.busLayer = layer
         if self.trainLayer != None:
             self.countTrain = self.within_range(x, y, self.r1, self.trainLayer)
         if self.busLayer != None:
             self.countBus = self.within_range(x, y, self.r1, self.busLayer)
-        self.train.append(self.countTrain)
-        self.bus.append(self.countBus)
+        if self.countBus <= 80:
+            self.PtR.append(self.countTrain+self.countBus*0.1)
+        else:
+            self.PtR.append(self.countTrain+8)
+
+    def publicSpaces(self, x, y):
+	self.bikeLayer = None
+	for layer in self.layers:
+	    if 'Bike_Parking_Sheds' in layer.name():
+		self.bikeLayer = layer
+	if self.bikeLayer != None:
+	    self.countBike = self.within_range(x, y, self.r2, self.bikeLayer)/10.0
+	self.PuS.append(self.countBike)
+
+    def cafeRetail(self, x, y):
+        self.cafeLayer = None
+        self.shopLayer = None
+        for layer in self.layers:
+            if 'Cafe' in layer.name():
+                self.cafeLayer = layer
+            if 'Retail' in layer.name():
+                self.shopLayer = layer
+        if self.cafeLayer != None:
+            self.countCafe1 = self.within_range(x, y, self.r2, self.cafeLayer)
+        if self.shopLayer != None:
+            self.countShop = self.within_range(x, y, self.r2, self.shopLayer)
+        if self.countShop <= 80:
+            self.MoU.append(self.countCafe1+self.countShop*0.1)
+        else:
+            self.MoU.append(self.countCafe+8)
+
+    def pedestrialScale(self, x, y):
+	self.lightsLayer = None
+	for layer in self.layers:
+	    if 'Lights' in layer.name():
+	    	self.lightsLayer = layer
+    	if self.lightsLayer != None:
+            self.countLights = self.within_range(x, y, self.r3, self.lightsLayer)/20.0
+	self.PeS.append(self.countLights)
+
+    def groundFloorRetails(self, x, y):
+        self.shopLayer = None
+        for layer in self.layers:
+            if 'Retail' in layer.name():
+                self.shopLayer = layer
+        if self.shopLayer != None:
+            self.countShop = self.within_range(x, y, self.r2, self.shopLayer)/10.0
+        self.GfR.append(self.countShop)
+
+    def sidewalkCafes(self, x, y):
+        self.cafeLayer = None
+        for layer in self.layers:
+            if 'Cafe' in layer.name():
+                self.cafeLayer = layer
+        if self.cafeLayer != None:
+            self.countCafe2 = self.within_range(x, y, self.r3, self.cafeLayer)
+        self.SC.append(self.countCafe2)
+
+    def treeLinedStreets(self, x, y):
+        self.treeLayer = None
+        for layer in self.layers:
+            if 'Tree' in layer.name():
+                self.treeLayer = layer
+        if self.treeLayer != None:
+            self.countTree = self.within_range(x, y, self.r4, self.treeLayer)/100.0
+        self.TlS.append(self.countTree)
+
+    def reducedParking(self, x, y):
+	self.parkingLayer = None
+	for layer in self.layers:
+	    if 'Parking_Garage' in layer.name():
+		    self.parkingLayer = layer
+	if self.parkingLayer != None:
+	    self.countParking = self.within_range(x, y, self.r1, self.parkingLayer)
+	self.RP.append(self.countParking)
 
     def within_range(self, x, y, r, layer):
         i = 0
         for f in layer.getFeatures():
-            if f.geometry().wkbType() == QGis.WKBMultiPoint:
-                geom = f.geometry().asMultiPoint()
-                xf = geom[0][0]
-                yf = geom[0][1]
-                if m.sqrt((x-xf)**2+(y-yf)**2) <= r:
-                    i += 1
-            elif f.geometry().wkbType() == QGis.WKBPoint:
-                geom = f.geometry().asPoint()
-                xf = geom[0]
-                yf = geom[1]
-                if m.sqrt((x-xf)**2+(y-yf)**2) <= r:
-                    i += 1
+            if f.geometry() != None:
+                if f.geometry().wkbType() == QGis.WKBMultiPoint:
+                    geom = f.geometry().asMultiPoint()
+                    xf = geom[0][0]
+                    yf = geom[0][1]
+                    if m.sqrt((x-xf)**2+(y-yf)**2) <= r:
+                        i += 1
+                elif f.geometry().wkbType() == QGis.WKBPoint:
+                    geom = f.geometry().asPoint()
+                    xf = geom[0]
+                    yf = geom[1]
+                    if m.sqrt((x-xf)**2+(y-yf)**2) <= r:
+                        i += 1
         return i
 
     def clearCoordinates(self):
@@ -318,56 +421,94 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
     def defineName(self, x, y):
         msgBox = QtGui.QInputDialog()
         text, ok = msgBox.getText(self, 'Name the Location', 'Please name the location you choose:')
-        if ok:
+        if ok and text != '':
             self.showCoordinates.addItem(text + ': (' + str(x) + ', ' + str(y) + ')')            
             self.coordinates.append((x, y))
             self.countTrain = 0
             self.countBus = 0
+            self.countBike = 0
+            self.countCafe1 = 0
+            self.countCafe2 = 0
+            self.countShop = 0
+            self.countLights = 0
+            self.countTree = 0
+            self.countParking = 0
             self.values.append(text)
             self.transportCalculation(x, y)
-            self.addLayer(x, y, text)
+            self.publicSpaces(x, y)
+            self.cafeRetail(x, y)
+            self.pedestrialScale(x, y)
+            self.groundFloorRetails(x, y)
+            self.sidewalkCafes(x, y)
+            self.treeLinedStreets(x, y)
+            self.reducedParking(x, y)
 
-    def addLayer(self, x, y, text):
-        self.active_layer = self.iface.activeLayer()
-        if self.active_layer != None:
-            self.layercrs = self.active_layer.crs()
-        else:
-            self.layercrs = self.layers[0].crs()
-        self.buffersize = self.r1
-        self.outputlayername = text
-        #Create the memory layer for the result
-        layeruri = 'Polygon?'
-        #CRS needs to be specified
-        crstext = 'PROJ4:%s' % self.layercrs.toProj4()
-        layeruri = layeruri + 'crs=' + crstext
-        memresult = QgsVectorLayer(layeruri, self.outputlayername, 'memory')
-        outbuffername = 'Walking Distance.shp'
-        #bufflayer = QgsVectorLayer(outbuffername, '800m', 'ogr')
+    def addLayer(self, features):
+        layers = self.iface.legendInterface().layers()
+        layer_list = []
+        for layer in layers:
+            layer_list.append(layer.name())
+        if 'Result' not in layer_list:
+            self.active_layer = self.iface.activeLayer()
+            if self.active_layer != None:
+                self.layercrs = self.active_layer.crs()
+            else:
+                self.layercrs = self.layers[0].crs()
+            #Create the memory layer for the result
+            layeruri = 'Polygon?'
+            #CRS needs to be specified
+            crstext = 'PROJ4:%s' % self.layercrs.toProj4()
+            layeruri = layeruri + 'crs=' + crstext
+            self.memresult = QgsVectorLayer(layeruri, 'Result', 'memory')
+            self.provider = self.memresult.dataProvider()
+            fields = []
+            self.memresult.startEditing()
+            for i in range(len(self.titleList)):
+                fields.append(QgsField(self.titleList[i], self.variantList[i]))
+            self.provider.addAttributes(fields)
+            self.memresult.setLayerTransparency(50)
+            self.memresult.updateFields()
+            self.memresult.commitChanges()
+            QgsMapLayerRegistry.instance().addMapLayers([self.memresult])
+        self.memresult.startEditing()
+        self.provider.addFeatures(features)
+        self.memresult.updateExtents()
+        self.memresult.commitChanges()
+        features = self.memresult.getFeatures()
+        for feat in features:
+            colour = feat.attribute('Color')
+            self.iface.mapCanvas().setSelectionColor(QtGui.QColor(colour))
+            i = feat.id()
+            self.memresult.select(i)
+            self.memresult.triggerRepaint()
+
+    def newFeature(self, item, color):
         feature = QgsFeature()
-        feature.setGeometry(QgsGeometry.fromPoint(QgsPoint(x, y)).buffer(self.r1, 50))
-        provider = memresult.dataProvider()
-        memresult.startEditing()
-        provider.addFeatures([feature])
-        memresult.setLayerTransparency(70)
-        memresult.commitChanges()
-        QgsMapLayerRegistry.instance().addMapLayers([memresult])
-
-    def addFeature(self, x, y, text):
-        pass
+        feature.setGeometry(QgsGeometry.fromPoint(QgsPoint(float(item[10][0]), float(item[10][1]))).buffer(self.r1, 50))
+        feature.setAttributes([item[9], item[0], item[1], item[2], item[3], item[4], item[5], item[6], item[7], item[8], color])
+        return feature
+        
 
     def zoomSelected(self):
-        if self.selectionButton.isChecked():
-            self.stop()
+        #if self.selectionButton.isChecked():
+            #self.stop()
+        i = None
         tobezoomed = self.showCoordinates.selectedItems()
         name = tobezoomed[0].text().split(':')[0]
-        current_layers = self.iface.legendInterface().layers()
-        for layer in current_layers:
-            if layer.name() == name:
-                layer.select(1)
-                self.iface.setActiveLayer(layer)
+        if self.memresult != None:
+            self.iface.setActiveLayer(self.memresult)
+            features = self.memresult.getFeatures()
+            for feat in features:
+                if feat.attribute('Name') == name:
+                    i = feat.id()
+            if i != None:
+                self.memresult.select(i)
                 self.canvas.zoomToSelected()
-                layer.deselect(1)
-                
+                self.memresult.deselect(i)
+            else:
+                self.stop()
+        else:
+            self.stop()                
 
     def selectRemoved(self):
         if self.selectionButton.isChecked():
@@ -377,67 +518,63 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
                 self.showCoordinates.setSelectionMode(3)
             else:
                 self.removeSelected()
-            #self.showItemTest()
-            #self.showCoordinates.itemClicked.connect(self.showItemTest)
-        #else:
 
     def removeSelected(self):
+        result_layer = None
         self.current_layers = self.iface.legendInterface().layers()
+        for layer in self.current_layers:
+            if layer.name() == 'Result':
+                result_layer = layer
         toberemoved = self.showCoordinates.selectedItems()
         toberemoved_list = []
-        self.PtR = []
-        self.tobesorted = []
+        ids = []
         for item in toberemoved:
             toberemoved_list.append(item.text().split(':')[0])
             item.setHidden(True)
-        for layer in self.current_layers:
-            if layer.name() in toberemoved_list:
-                QgsMapLayerRegistry.instance().removeMapLayer(layer)
         for i in toberemoved_list:
             if i in self.values:
                 row = self.values.index(i)
                 del self.values[row]
-                del self.train[row]
-                del self.bus[row]
+                del self.PtR[row]
+                del self.PuS[row]
+                del self.MoU[row]
+                del self.PeS[row]
+                del self.GfR[row]
+                del self.SC[row]
+                del self.TlS[row]
+                del self.RP[row]
                 del self.coordinates[row]
+        #self.stop()
+        if result_layer != None:
+            features = result_layer.getFeatures()
+            result_layer.startEditing()
+            for feat in features:
+                if feat.attribute('Name') in toberemoved_list:
+                    ids.append(feat.id())
+            result_layer.setSelectedFeatures(ids)
+            result_layer.deleteSelectedFeatures()
+            result_layer.updateExtents()
+            result_layer.commitChanges()
         self.stop()
-
-    def publicTransport(self):
-        for i in range(len(self.values)):
-            if len(self.values) <= 80:
-                self.PtR.append(self.train[i]+self.bus[i]*0.1)
-            else:
-                self.PtR.append(self.train[i]+8)
-
-#    def showItemTest(self):
-#        self.showCoordinates.addItem(str(self.showCoordinates.currentRow()))
+        #self.showCoordinates.addItem(str(self.shop)+str(self.PtR)+str(self.MoU))
+##                QgsMapLayerRegistry.instance().removeMapLayer(layer)
 
 
 #######
 #    Visualisation functions
 #######
-    def plotRadar(self, PtR, color = 'b'):
+    def plotRadar(self, item, color = 'b'):
         labels = numpy.array(self.labelList)
         datalength = 8
-        #standard = numpy.array([10]*8)
-        data = numpy.array([PtR, 2, 3, 4, 5, 6, 7, 8])
+        data = numpy.array([item[1], item[2], item[3], item[4], item[5], item[6], item[7], item[8]])
         angles = numpy.linspace(0, 2*numpy.pi, datalength, endpoint = False)
-        #standard = numpy.concatenate((standard, [standard[0]]))
         data = numpy.concatenate((data, [data[0]]))
         angles = numpy.concatenate((angles, [angles[0]]))
-        #fig = plt.figure()
         self.ax = self.chart_figure.add_subplot(111, polar = True)
-        #self.ax.plot(angles, standard, 'r', linewidth = 2)
-        #self.ax.fill(angles, standard, 'r', alpha = 0.2)
         self.ax.plot(angles, data, color, linewidth = 2)
         self.ax.fill(angles, data, color, alpha = 0.2)
         self.ax.set_thetagrids(angles*180/numpy.pi, labels)
-        self.ax.set_title('TOD\n')
-        #self.ax.legend(name)
-        #self.ax.grid = True
         self.chart_canvas.draw()
-##            else:
-##                self.clearChart()
 
     def saveChartPNG(self):
         path = QtGui.QFileDialog.getSaveFileName(self, 'Save Chart', 'Result', '.png')
@@ -461,19 +598,36 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
 #    Reporting functions
 #######
     # table window functions
-    def updateTable(self, values, PtR, coordinates):
-        self.tableWidget.setColumnCount(10)
-        self.tableWidget.setHorizontalHeaderLabels(['Locations'] + self.labelList + ['Coordinates'])
+    def updateTable(self, values, PtR, PuS, MoU, PeS, GfR, SC, TlS, RP, coordinates):
+        self.tableWidget.setColumnCount(11)
+        self.tableWidget.setHorizontalHeaderLabels(['Locations', 'Total'] + self.labelList + ['Coordinates'])
         self.tableWidget.setRowCount(len(values))
         for i in range(len(values)):
-            self.tobesorted.append((PtR[i], values[i], coordinates[i]))
+            self.tobesorted.append((PtR[i]+PuS[i]+MoU[i]+PeS[i]+GfR[i]+SC[i]+TlS[i]+RP[i], PtR[i], PuS[i], MoU[i], PeS[i], GfR[i], SC[i], TlS[i], RP[i], values[i], coordinates[i]))
         self.tobesorted.sort(reverse = True)
         for i in range(len(self.tobesorted)):
-            self.tableWidget.setItem(i, 0, QtGui.QTableWidgetItem(unicode(self.tobesorted[i][1])))
+            self.tableWidget.setItem(i, 0, QtGui.QTableWidgetItem(unicode(self.tobesorted[i][9])))
             self.tableWidget.setItem(i, 1, QtGui.QTableWidgetItem(unicode(self.tobesorted[i][0])))
-            self.tableWidget.setItem(i, 9, QtGui.QTableWidgetItem(unicode(self.tobesorted[i][2])))
+            self.tableWidget.setItem(i, 2, QtGui.QTableWidgetItem(unicode(self.tobesorted[i][1])))
+            self.tableWidget.setItem(i, 3, QtGui.QTableWidgetItem(unicode(self.tobesorted[i][2])))
+            self.tableWidget.setItem(i, 4, QtGui.QTableWidgetItem(unicode(self.tobesorted[i][3])))
+            self.tableWidget.setItem(i, 5, QtGui.QTableWidgetItem(unicode(self.tobesorted[i][4])))
+            self.tableWidget.setItem(i, 6, QtGui.QTableWidgetItem(unicode(self.tobesorted[i][5])))
+            self.tableWidget.setItem(i, 7, QtGui.QTableWidgetItem(unicode(self.tobesorted[i][6])))
+            self.tableWidget.setItem(i, 8, QtGui.QTableWidgetItem(unicode(self.tobesorted[i][7])))
+            self.tableWidget.setItem(i, 9, QtGui.QTableWidgetItem(unicode(self.tobesorted[i][8])))
+            self.tableWidget.setItem(i, 10, QtGui.QTableWidgetItem(unicode(self.tobesorted[i][10])))
         self.tableWidget.horizontalHeader().setResizeMode(0, QtGui.QHeaderView.ResizeToContents)
-        self.tableWidget.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Stretch)
+##        self.tableWidget.horizontalHeader().setResizeMode(1, QtGui.QHeaderView.Stretch)
+##        self.tableWidget.horizontalHeader().setResizeMode(2, QtGui.QHeaderView.Stretch)
+##        self.tableWidget.horizontalHeader().setResizeMode(3, QtGui.QHeaderView.Stretch)
+##        self.tableWidget.horizontalHeader().setResizeMode(4, QtGui.QHeaderView.Stretch)
+##        self.tableWidget.horizontalHeader().setResizeMode(5, QtGui.QHeaderView.Stretch)
+##        self.tableWidget.horizontalHeader().setResizeMode(6, QtGui.QHeaderView.Stretch)
+##        self.tableWidget.horizontalHeader().setResizeMode(7, QtGui.QHeaderView.Stretch)
+##        self.tableWidget.horizontalHeader().setResizeMode(8, QtGui.QHeaderView.Stretch)
+##        self.tableWidget.horizontalHeader().setResizeMode(9, QtGui.QHeaderView.Stretch)
+##        self.tableWidget.horizontalHeader().setResizeMode(10, QtGui.QHeaderView.Stretch)
         self.tableWidget.resizeRowsToContents()
 
     def saveTableCSV(self):
