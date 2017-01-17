@@ -341,7 +341,7 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
         if self.countShop <= 80:
             self.MoU.append(self.countCafe1+self.countShop*0.1)
         else:
-            self.MoU.append(self.countCafe+8)
+            self.MoU.append(self.countCafe1+8)
 
     def pedestrialScale(self, x, y):
 	self.lightsLayer = None
