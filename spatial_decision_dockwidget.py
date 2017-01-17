@@ -592,20 +592,23 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
 
     def saveChartPNG(self):
         path = QtGui.QFileDialog.getSaveFileName(self, 'Save Chart', 'Result', '.png')
+        try:
+            path
+        except:
+            self.errorOccurs()
         self.pixmap = QtGui.QPixmap()
         self.saved_legend = self.pixmap.grabWidget(self.legend)
         if path:
+            self.chart_figure.savefig(path)
+            path_legend = QtGui.QFileDialog.getSaveFileName(self, 'Save Legend', 'Result Legend', '.png')
             try:
-                self.chart_figure.savefig(path)
-                path_legend = QtGui.QFileDialog.getSaveFileName(self, 'Save Legend', 'Result Legend', '.png')
-                #if the chart is not saved, don't even bother saving the legend
-                if path_legend:
-                    try:
-                        self.saved_legend.save(path_legend, 'png')
-                    except:
-                        self.errorOccurs()
+                path_legend
             except:
-                self.errorOccurs()            
+                self.errorOccurs()
+            #if the chart is not saved, don't even bother saving the legend
+            if path_legend:
+                self.saved_legend.save(path_legend, 'png')
+          
             
 
     def clearChart(self):
