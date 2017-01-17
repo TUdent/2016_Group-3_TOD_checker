@@ -1,5 +1,0 @@
-<RCC>
-    <qresource prefix="/plugins/SelectRange" >
-        <file>icon.png</file>
-    </qresource>
-</RCC>
