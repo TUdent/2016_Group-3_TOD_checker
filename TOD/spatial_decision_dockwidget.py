@@ -591,15 +591,30 @@ class SpatialDecisionDockWidget(QtGui.QDockWidget, FORM_CLASS):
         self.chart_canvas.draw()
 
     def saveChartPNG(self):
-        path = QtGui.QFileDialog.getSaveFileName(self, 'Save Chart', 'Result', '.png')
-        self.pixmap = QtGui.QPixmap()
-        self.saved_legend = self.pixmap.grabWidget(self.legend)
-        if path:
-            self.chart_figure.savefig(path)
-            path_legend = QtGui.QFileDialog.getSaveFileName(self, 'Save Legend', 'Result Legend', '.png')
-            #if the chart is not saved, don't even bother saving the legend
-            if path_legend:
-                self.saved_legend.save(path_legend, 'png')
+        save_it = self.toSaveorNottoSave()
+        if save_it == True:
+            path = QtGui.QFileDialog.getSaveFileName(self, 'Save Chart', 'Result', '.png')
+            self.pixmap = QtGui.QPixmap()
+            self.saved_legend = self.pixmap.grabWidget(self.legend)
+            if path:
+                self.chart_figure.savefig(path)
+                path_legend = QtGui.QFileDialog.getSaveFileName(self, 'Save Legend', 'Result Legend', '.png')
+                #if the chart is not saved, don't even bother saving the legend
+                if path_legend:
+                    self.saved_legend.save(path_legend, 'png')
+
+    def toSaveorNottoSave(self):
+        msgBox = QtGui.QMessageBox()
+        msgBox.setText("Are you working on a Windows computer by any chance?")
+        msgBox.setStandardButtons(QtGui.QMessageBox.Yes)
+        msgBox.addButton(QtGui.QMessageBox.No)
+        msgBox.setDefaultButton(QtGui.QMessageBox.Yes)
+        if msgBox.exec_() == QtGui.QMessageBox.Yes:
+            return False
+        else:
+            return True
+          
+            
 
     def clearChart(self):
         #self.ax.grid = False
